@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="description" content="From Description to Interactive VR Scene: An LLM Agent for Authoring Immersive Experiences">
+  <meta name="keywords" content="LLM agent, virtual reality, healthcare visualization, immersive experience, procedural generation, Unity, VLM">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Description to Interactive VR Scene</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro|Space+Mono" rel="stylesheet">
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+  <script defer src="./static/js/fontawesome.all.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="./static/js/index.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════════ HERO ══════════════════════ -->
+<section class="hero">
+  <div class="hero-body">
+    <div class="container is-max-desktop has-text-centered">
+      <div style="margin-bottom:0.75rem;">
+        <span style="display:inline-block;color:#e53e3e;font-size:0.85rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">🔥 IEEE VISxGenAI 2026</span>
+      </div>
+      <h1 class="title is-2 publication-title">🥽 From Description to Interactive VR Scene</h1>
+      <p class="subtitle is-4 hero-subtitle">An LLM Agent for Authoring Immersive Experiences</p>
+      <div class="is-size-5 publication-authors" style="margin-top:0.75rem;line-height:2;">
+        <span class="author-block">Rongqian Chen<sup>1</sup>,&nbsp;</span>
+        <span class="author-block">Allison Andreyev<sup>1</sup>,&nbsp;</span>
+        <span class="author-block">Xuan Wang<sup>2</sup>,&nbsp;</span>
+        <span class="author-block">Jianan Jiang<sup>2</sup>,&nbsp;</span>
+        <span class="author-block">Bin Li<sup>2</sup>,&nbsp;</span>
+        <span class="author-block">Tian Lan<sup>1</sup></span>
+      </div>
+      <div class="is-size-6 publication-authors" style="margin-top:0.4rem;">
+        <span class="author-block"><sup>1</sup>George Washington University&ensp;</span>
+        <span class="author-block"><sup>2</sup>Pennsylvania State University</span>
+      </div>
+      <div class="video-link-row" style="margin-top:1.25rem;">
+        <!-- TODO: replace # with the paper / code links -->
+        <a href="#" class="video-pill" target="_blank">
+          <span class="icon"><i class="fas fa-file-pdf"></i></span><span>Paper</span>
+        </a>
+        <a href="#" class="video-pill" target="_blank">
+          <span class="icon"><i class="fab fa-github"></i></span><span>Code</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ TEASER ══════════════════════ -->
+<section class="section" id="teaser" style="padding-bottom:2rem;">
+  <div class="container is-max-desktop">
+    <div class="figure-block" style="margin-top:0;">
+      <img src="./figures/pipeline.png" alt="Environment generation pipeline">
+      <p class="figure-caption"><strong>Figure 1.</strong> Environment generation pipeline. A frontier-LLM Parser turns a user experience description, grounded by the Context module (assets, rules, logs, skills), into a structured plan. A Multi-Thread Reflection module runs five lightweight-VLM and rule-based threads over three orthogonal screenshots and the live scene state, emitting typed corrections. The Decision module fuses plan, scene, object, and user status into Unity commands; Unity returns the multimodal artifacts that close the loop.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ ABSTRACT + CARDS ══════════════════════ -->
+<section class="section" id="abstract">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 section-heading">Abstract</h2>
+    <div class="content has-text-justified abstract-text">
+      <p>Authoring interactive immersive scenes for healthcare training and patient education today requires sustained collaboration between developers, 3D-modeling artists, and clinicians, putting immersive medical visualization out of reach for most domain experts. We present an <b>LLM-based multi-module agent</b> that turns a single natural-language description into a fully populated, interactive VR scene, lowering the authoring barrier from code and 3D tooling to natural language commands.</p>
+      <p>A closed loop between a Python reasoning core and a Unity runtime combines a <b>frontier-LLM planner</b> with <b>lightweight VLM critics</b> grounded in three orthogonal screenshots. A separate interaction layer compiles affordances and story logic into a JSON so runtime response is <b>LLM-free</b>. Across fifteen diverse healthcare scenarios (45 trials), the agent recovers the correct object set in every scene at <b>5.1 frontier-LLM calls</b> and <b>113 s per trial</b>, and generates coherent multi-beat story lines averaging <b>5.0 beats</b> per scenario.</p>
+    </div>
+
+    <div class="contrib-cards">
+      <div class="contrib-card accent-green">
+        <div class="contrib-icon"><i class="fas fa-cubes"></i></div>
+        <h3>Multi-Module Agent</h3>
+        <p>Generates complex VR scenes and per-object interaction logic from natural-language user experience descriptions alone.</p>
+      </div>
+      <div class="contrib-card accent-blue">
+        <div class="contrib-icon"><i class="fas fa-sitemap"></i></div>
+        <h3>Hierarchical Planning</h3>
+        <p>Decomposes high-level instructions into structured plans and executable actions, with closed-loop reflection for adaptive behavior.</p>
+      </div>
+      <div class="contrib-card accent-red">
+        <div class="contrib-icon"><i class="fas fa-hospital"></i></div>
+        <h3>15-Scenario Evaluation</h3>
+        <p>Emergency, ICU, surgical, dental, ophthalmology, radiology, maternity, lab, and cosmetic scenes, each run for three independent trials.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ SYSTEM OVERVIEW ══════════════════════ -->
+<section class="section grasp-section-light" id="pipeline">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 section-heading">System Overview</h2>
+    <p class="section-subheading">A Python reasoning core and a Unity runtime iteratively plan, execute, reflect, and revise until the scene is bounded, collision-free, physically plausible, and semantically coherent.</p>
+
+    <div class="pipeline-anim" id="pipeline-anim">
+      <div class="pipe-step">
+        <div class="pipe-node pipe-user">
+          <i class="fas fa-vr-cardboard"></i>
+          <span class="pipe-label">User</span>
+          <span class="pipe-detail">Experience description</span>
+        </div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-node pipe-parser">
+          <i class="fas fa-brain"></i>
+          <span class="pipe-label">Parser</span>
+          <span class="pipe-detail pipe-mono">plan.json</span>
+        </div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-node pipe-reflect">
+          <i class="fas fa-search"></i>
+          <span class="pipe-label">Reflection</span>
+          <span class="pipe-detail">5 parallel threads</span>
+        </div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-node pipe-decision">
+          <i class="fas fa-code-branch"></i>
+          <span class="pipe-label">Decision</span>
+          <span class="pipe-detail">Typed commands</span>
+        </div>
+      </div>
+      <div class="pipe-arrow"><i class="fas fa-chevron-right"></i></div>
+      <div class="pipe-step">
+        <div class="pipe-node pipe-unity">
+          <i class="fab fa-unity"></i>
+          <span class="pipe-label">Unity</span>
+          <span class="pipe-detail">State + 3 screenshots</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="pipeline-loop-indicator pipeline-loop-light">
+      <i class="fas fa-redo-alt"></i>
+      <span>Closed loop &mdash; Unity writes back scene_state.json, interaction_events.json, unity_commands.json, agent.log, and plane_xy / xz / yz screenshots until no thread issues further corrections</span>
+    </div>
+
+    <div class="teaser-prompt" style="margin-top:2rem;">
+      <i class="fas fa-comment-dots"></i>
+      <span>&ldquo;Generate an operation room with instruments and surgeons.&rdquo;</span>
+    </div>
+    <div class="figure-block" style="margin-top:1rem;">
+      <img loading="lazy" src="./figures/scene_operating_room_square.png" alt="Operating room generated by the agent from a one-sentence description" style="max-width:520px;width:100%;">
+      <p class="figure-caption">A fully populated, interactive Unity scene generated from the single sentence above &mdash; no object list, coordinates, or room configuration supplied.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ METHOD ══════════════════════ -->
+<section class="section" id="method">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 section-heading">Method</h2>
+
+    <div class="method-block">
+      <h3 class="title is-4 method-subheading">Two LLM Tiers</h3>
+      <p class="method-desc">Plan quality determines scene quality &mdash; an incorrect object list cannot be repaired by downstream reflection. Reflection and per-step decisions, by contrast, are high-frequency and benefit from iteration speed rather than reasoning depth.</p>
+      <div class="ablation-cards">
+        <div class="ablation-card accent-purple">
+          <div class="ablation-icon"><i class="fas fa-chess-king"></i></div>
+          <h4>Frontier LLM <span class="tag-pill">few, high-leverage calls</span></h4>
+          <p>Scene synthesis, interaction-map generation, and story-line generation (<span class="pipe-mono">gpt-5.4-mini</span>).</p>
+        </div>
+        <div class="ablation-card accent-teal">
+          <div class="ablation-icon"><i class="fas fa-bolt"></i></div>
+          <h4>Lightweight VLM <span class="tag-pill">fast, frequent calls</span></h4>
+          <p>Placement loop and VLM-backed reflection threads (<span class="pipe-mono">Llama-4-Scout-17B</span> via Groq), closing the feedback loop in seconds.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="method-block">
+      <h3 class="title is-4 method-subheading">Modules</h3>
+      <div class="ablation-cards">
+        <div class="ablation-card accent-green">
+          <div class="ablation-icon"><i class="fas fa-file-alt"></i></div>
+          <h4>Parser</h4>
+          <p>Outputs an object list (typed prefab references with role tags), a layout (3D anchors, surface hints, clearance budgets), and an interaction map, persisted as <span class="pipe-mono">plan.json</span>.</p>
+        </div>
+        <div class="ablation-card accent-blue">
+          <div class="ablation-icon"><i class="fas fa-database"></i></div>
+          <h4>Context</h4>
+          <p>Long-term memory and tool index: asset catalog, authoring rules, execution logs, action map, and reusable skills &mdash; injected directly or retrieved from a vector store.</p>
+        </div>
+        <div class="ablation-card accent-amber">
+          <div class="ablation-icon"><i class="fas fa-random"></i></div>
+          <h4>Decision</h4>
+          <p>Fuses plan, environment, object, and user status into <span class="pipe-mono">PlaceObject</span>, <span class="pipe-mono">MoveObject</span>, <span class="pipe-mono">DeleteObject</span>, animation and lighting commands, validated against the action map.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="method-block">
+      <h3 class="title is-4 method-subheading">Multi-Thread Reflection</h3>
+      <p class="method-desc">Five specialized threads each pair a lightweight VLM with a deterministic checker, so every LLM verdict is corroborated numerically. Each emits typed <span class="pipe-mono">add</span> / <span class="pipe-mono">delete</span> / <span class="pipe-mono">move</span> corrections. Click a thread to see what it checks.</p>
+      <div class="fsm-diagram" id="fsm-diagram">
+        <div class="fsm-state thread-bound" data-state="BOUND" tabindex="0">
+          <div class="fsm-state-inner"><i class="fas fa-vector-square"></i><span>#1 Bound</span></div>
+        </div>
+        <div class="fsm-state thread-collision" data-state="COLLISION" tabindex="0">
+          <div class="fsm-state-inner"><i class="fas fa-car-crash"></i><span>#2 Collision</span></div>
+        </div>
+        <div class="fsm-state thread-physics" data-state="PHYSICS" tabindex="0">
+          <div class="fsm-state-inner"><i class="fas fa-weight-hanging"></i><span>#3 Physics</span></div>
+        </div>
+        <div class="fsm-state thread-semantic" data-state="SEMANTIC" tabindex="0">
+          <div class="fsm-state-inner"><i class="fas fa-layer-group"></i><span>#4 Semantic</span></div>
+        </div>
+        <div class="fsm-state thread-characters" data-state="CHARACTERS" tabindex="0">
+          <div class="fsm-state-inner"><i class="fas fa-user-md"></i><span>#5 Characters</span></div>
+        </div>
+      </div>
+      <div class="fsm-info-panel" id="fsm-info-panel">
+        <p class="fsm-hint"><i class="fas fa-info-circle"></i> Click a reflection thread above to see its check</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ INTERACTION ══════════════════════ -->
+<section class="section grasp-section-light" id="interaction">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 section-heading">Interaction Layer</h2>
+    <p class="section-subheading">The frontier LLM emits two JSON artifacts up front. After generation, the Unity runtime services user input against both without further LLM calls, enabling real-time feedback.</p>
+
+    <div class="ablation-cards">
+      <div class="ablation-card accent-blue">
+        <div class="ablation-icon"><i class="fas fa-th"></i></div>
+        <h4>Interaction Map <span class="tag-pill">environment-inherent</span></h4>
+        <p>Rows are scene entities, columns are typed action primitives (gaze, grab, release, touch). Each cell holds the deterministic response &mdash; a dialogue line, animation, or state transition. Keyed on role tags, so the same prefab can expose different affordances across scenarios.</p>
+      </div>
+      <div class="ablation-card accent-amber">
+        <div class="ablation-icon"><i class="fas fa-stream"></i></div>
+        <h4>Story Line <span class="tag-pill">task-conditioned</span></h4>
+        <p>An ordered chain of beats, each binding a target object, a required user action, and a sequence of Unity actions. Beats are strictly sequential: the next one unlocks only after the current trigger fires.</p>
+      </div>
+    </div>
+
+    <div class="method-block" style="margin-top:2rem;">
+      <h3 class="title is-4 method-subheading">Try the story chain</h3>
+      <p class="method-desc"><em>&ldquo;Bring the supply trolley to the surgeon.&rdquo;</em> Only the active beat's trigger advances the story.</p>
+      <div class="beat-chain" id="beat-chain">
+        <button class="beat" data-beat="0"><i class="fas fa-eye"></i><span class="beat-action">Gaze</span><span class="beat-target">Doctor</span></button>
+        <i class="fas fa-long-arrow-alt-right beat-arrow"></i>
+        <button class="beat" data-beat="1" disabled><i class="fas fa-hand-rock"></i><span class="beat-action">Grab</span><span class="beat-target">Supply trolley</span></button>
+        <i class="fas fa-long-arrow-alt-right beat-arrow"></i>
+        <button class="beat" data-beat="2" disabled><i class="fas fa-hand-paper"></i><span class="beat-action">Release</span><span class="beat-target">At surgeon</span></button>
+      </div>
+      <div class="fsm-info-panel" id="beat-log">
+        <p class="fsm-hint"><i class="fas fa-info-circle"></i> Fire beat 1 to start the story</p>
+      </div>
+    </div>
+
+    <div class="figure-block">
+      <img loading="lazy" src="./figures/interaction.png" alt="Interaction pipeline" style="max-width:70%;">
+      <p class="figure-caption"><strong>Figure 2.</strong> Interaction pipeline. The frontier LLM emits an <em>Interaction map</em> of per-object action affordances over a small set of typed primitives, and a <em>Story line</em> of strictly sequential trigger steps, each binding a target object, the required user action, and the response the runtime emits on success.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ GALLERY ══════════════════════ -->
+<section class="section" id="gallery">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 section-heading">Case Studies</h2>
+    <p class="section-subheading">Generated scenes across five specialties, and runtime interactions captured during user play sessions.</p>
+
+    <h3 class="title is-5 gallery-label accent-blue"><i class="fas fa-cube"></i> Generated environments</h3>
+    <div class="scene-grid">
+      <figure class="figure-block"><img loading="lazy" src="./figures/scene_ed_triage.jpg" alt="ED Triage scene"><figcaption class="figure-caption">(a) ED Triage</figcaption></figure>
+      <figure class="figure-block"><img loading="lazy" src="./figures/scene_therapy_gym.jpg" alt="Therapy Gym scene"><figcaption class="figure-caption">(b) Therapy Gym</figcaption></figure>
+      <figure class="figure-block"><img loading="lazy" src="./figures/scene_dental.jpg" alt="Dental scene"><figcaption class="figure-caption">(c) Dental</figcaption></figure>
+      <figure class="figure-block"><img loading="lazy" src="./figures/scene_ward.jpg" alt="Hospital Ward scene"><figcaption class="figure-caption">(d) Ward</figcaption></figure>
+      <figure class="figure-block"><img loading="lazy" src="./figures/scene_cosmetic.jpg" alt="Cosmetic scene"><figcaption class="figure-caption">(e) Cosmetic</figcaption></figure>
+    </div>
+
+    <h3 class="title is-5 gallery-label accent-amber"><i class="fas fa-hand-pointer"></i> Runtime interactions</h3>
+    <div class="scene-grid scene-grid-4">
+      <figure class="figure-block"><img loading="lazy" src="./figures/interact_nurse_chair.jpg" alt="Nurse leads the user to a highlighted chair"><figcaption class="figure-caption">(f) The nurse leads the user to a highlighted chair</figcaption></figure>
+      <figure class="figure-block"><img loading="lazy" src="./figures/interact_doctor_results.jpg" alt="User discusses results with the doctor"><figcaption class="figure-caption">(g) The user discusses results with the doctor</figcaption></figure>
+      <figure class="figure-block"><img loading="lazy" src="./figures/interact_instrument_info.jpg" alt="Instrument displays its usage information"><figcaption class="figure-caption">(h) The instrument displays its usage information</figcaption></figure>
+      <figure class="figure-block"><img loading="lazy" src="./figures/interact_wheelchair.jpg" alt="Nursing assistant directs the user to a wheelchair"><figcaption class="figure-caption">(i) The nursing assistant directs the user to a highlighted wheelchair</figcaption></figure>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ RESULTS ══════════════════════ -->
+<section class="section grasp-section-light" id="results">
+  <div class="container is-max-desktop">
+    <h2 class="title is-3 section-heading">Results</h2>
+    <p class="section-subheading">Fifteen healthcare-VR scenarios (S01&ndash;S15), three trials each, drawn from a shared library of 440 medical-equipment and 24 character prefabs. Each scenario is supplied only as a free-form narrative.</p>
+
+    <div class="stat-row">
+      <div class="stat accent-green"><span class="stat-val">15/15</span><span class="stat-label">scenes with correct object set</span></div>
+      <div class="stat accent-purple"><span class="stat-val">5.1</span><span class="stat-label">frontier-LLM calls / trial</span></div>
+      <div class="stat accent-teal"><span class="stat-val">113 s</span><span class="stat-label">wall-clock / trial</span></div>
+      <div class="stat accent-red"><span class="stat-val">3.3%</span><span class="stat-label">collision rate</span></div>
+      <div class="stat accent-amber"><span class="stat-val">5.0</span><span class="stat-label">beats / story line</span></div>
+    </div>
+
+    <div class="method-block" style="margin-top:2rem;">
+      <h3 class="title is-4 method-subheading">Coherence vs. Spatial Reasoning</h3>
+      <p class="method-desc">LLM-as-judge ratings (1&ndash;5) split sharply: coherence averages <strong>4.16</strong> while spatial reasoning averages only <strong>2.71</strong>. Semantic object retrieval is the simpler task; dense spatial layout is the bottleneck.</p>
+      <div class="likert-chart-wrap" style="max-width:100%;">
+        <canvas id="judge-chart" height="120"></canvas>
+      </div>
+    </div>
+
+    <div class="method-block">
+      <h3 class="title is-4 method-subheading">Phase 1: Environment Generation</h3>
+      <p class="method-desc">Open scenarios such as S01 and S03 close every plan step; the densest setups (S04 surgery prep, S07 supply closet) repeatedly hit the three-iteration reflection cap. Click a column to sort.</p>
+      <div class="table-wrap">
+        <table class="comparison-table sortable-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-col="0">Scenario <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="1">Coll % <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="2">Plan % <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="3">LLM <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="4">Time (s) <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="5">Coh <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="6">Spat <i class="fas fa-sort sort-icon"></i></th>
+            </tr>
+          </thead>
+          <tbody id="phase1-body"></tbody>
+          <tfoot>
+            <tr class="grasp-row">
+              <td><strong>Average</strong></td><td>3.3</td><td>73.9</td><td>5.1</td><td>113</td><td>4.16</td><td>2.71</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="ablation-note" style="margin-top:0.75rem;"><i class="fas fa-info-circle"></i> Coll = collision rate; Plan = step-completion rate; LLM = frontier-LLM calls per trial; Time = Phase-1 wall-clock per trial; Coh, Spat = LLM-as-judge coherence and spatial scores (1&ndash;5). Means over n=3 trials.</p>
+    </div>
+
+    <div class="method-block">
+      <h3 class="title is-4 method-subheading">Phase 2: Interaction Layer</h3>
+      <p class="method-desc">Story lines average 5.0 beats (range 4.0&ndash;6.7), each dispatching 3.5 Unity actions. The only narrative score below 3.0 is S07, the one scenario without characters.</p>
+      <div class="table-wrap">
+        <table class="comparison-table sortable-table">
+          <thead>
+            <tr>
+              <th class="sortable" data-col="0">Scenario <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="1">AmbCov <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="2">Beats <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="3">Acts/B <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="4">ObjInf <i class="fas fa-sort sort-icon"></i></th>
+              <th class="sortable" data-col="5">Narr <i class="fas fa-sort sort-icon"></i></th>
+            </tr>
+          </thead>
+          <tbody id="phase2-body"></tbody>
+          <tfoot>
+            <tr class="grasp-row">
+              <td><strong>Average</strong></td><td>0.64</td><td>5.0</td><td>3.50</td><td>3.87</td><td>3.67</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p class="ablation-note" style="margin-top:0.75rem;"><i class="fas fa-info-circle"></i> AmbCov = fraction of placed objects with at least one interaction binding; Beats = mean story-line length; Acts/B = Unity actions per beat; ObjInf, Narr = LLM-as-judge object-informativeness and narrative-coherence scores (1&ndash;5).</p>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════ BIBTEX ══════════════════════ -->
+<section class="section" id="BibTeX">
+  <div class="container is-max-desktop content">
+    <h2 class="title is-3 section-heading">BibTeX</h2>
+    <div class="bibtex-wrap">
+      <pre id="bibtex-code">@inproceedings{chen2026description,
+    author    = {Chen, Rongqian and Andreyev, Allison and Wang, Xuan and Jiang, Jianan and Li, Bin and Lan, Tian},
+    title     = {From Description to Interactive VR Scene: An LLM Agent for Authoring Immersive Experiences},
+    booktitle = {IEEE Visualization and Visual Analytics (VIS)},
+    year      = {2026}
+}</pre>
+      <button class="bibtex-copy-btn" id="bibtex-copy-btn" title="Copy BibTeX">
+        <i class="fas fa-copy" id="bibtex-copy-icon"></i>
+        <span id="bibtex-copy-label">Copy</span>
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- Image modal -->
+<div class="modal" id="image-modal" aria-label="Expanded image modal">
+  <div class="modal-background"></div>
+  <div class="modal-content">
+    <figure class="image"><img id="modal-image" alt=""></figure>
+  </div>
+  <button class="modal-close is-large" aria-label="close"></button>
+</div>
+
+<footer class="footer">
+  <div class="columns is-centered">
+    <div class="column is-8">
+      <div class="content has-text-centered" style="font-size:0.85rem;color:#888;">
+        <p>This work was supported by NSF Awards No. 2420351 &amp; 2420352.</p>
+        <p>Website template based on <a href="https://nerfies.github.io" target="_blank">Nerfies</a>. Licensed under <a href="http://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>.</p>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
