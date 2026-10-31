@@ -61,99 +61,192 @@ function initPipelineAnimation() {
   });
 }
 
-// ─── Reflection thread cards ─────────────────────────────────
-var THREAD_INFO = {
-  BOUND: {
-    title: '#1 Bound',
-    desc: 'Clamps placements to the room\'s [x<sub>min</sub>, x<sub>max</sub>] &times; [z<sub>min</sub>, z<sub>max</sub>] envelope and re-verifies them under the VLM.'
-  },
-  COLLISION: {
-    title: '#2 Collision',
-    desc: 'Runs Axis-Aligned Bounding Box (AABB) pair tests for geometric overlap, plus a VLM recheck on three orthogonal screenshots (xy, xz, yz).'
-  },
-  PHYSICS: {
-    title: '#3 Physics',
-    desc: 'Flags floating or unsupported objects whose vertical position is inconsistent with any plausible parent surface beneath them. Runs deterministically.'
-  },
-  SEMANTIC: {
-    title: '#4 Semantic',
-    desc: 'Verifies support and containment relationships (e.g., small props rest on parent surfaces with y &ge; 0.7) using both height tests and a VLM coherence judgment over the same screenshots.'
-  },
-  CHARACTERS: {
-    title: '#5 Characters',
-    desc: 'Ensures every human role parsed from the experience description is present in the scene, adding any characters that earlier passes dropped. Runs deterministically.'
-  }
-};
-
-function initThreadCards() {
-  var states = document.querySelectorAll('.fsm-state');
-  var panel  = document.getElementById('fsm-info-panel');
-  if (!states.length || !panel) return;
-
-  states.forEach(function(el) {
-    function activate() {
-      states.forEach(function(s) { s.classList.remove('active'); });
-      el.classList.add('active');
-      var info = THREAD_INFO[el.dataset.state];
-      panel.className = 'fsm-info-panel thread-panel thread-' + el.dataset.state.toLowerCase();
-      panel.innerHTML =
-        '<div class="fsm-info-content">' +
-          '<h4>' + info.title + '</h4>' +
-          '<p>' + info.desc + '</p>' +
-        '</div>';
-    }
-    el.addEventListener('click', activate);
-    el.addEventListener('keydown', function(e) {
-      if (e.key === 'Enter' || e.key === ' ') activate();
-    });
-  });
-}
-
-// ─── Story-chain demo ────────────────────────────────────────
-var BEAT_RESPONSES = [
-  'Doctor: &ldquo;We need the supply trolley over here.&rdquo; The trolley is highlighted.',
-  'The supply trolley attaches to the user\'s hand. The surgeon turns and waits.',
-  'Trolley delivered. Surgeon: &ldquo;Thank you &mdash; we\'re ready to begin.&rdquo; Story complete.'
+// ─── Runtime demo: interaction map + story line ──────────────
+var PRIMITIVES = [
+  { id: 'gaze',    label: 'Gaze',    icon: 'fa-eye' },
+  { id: 'grab',    label: 'Grab',    icon: 'fa-hand-rock' },
+  { id: 'release', label: 'Release', icon: 'fa-hand-paper' },
+  { id: 'touch',   label: 'Touch',   icon: 'fa-hand-pointer' }
 ];
 
-function initBeatChain() {
-  var beats = document.querySelectorAll('#beat-chain .beat');
-  var log   = document.getElementById('beat-log');
-  if (!beats.length || !log) return;
+var RESPONSE_ICON = { dialogue: 'fa-comment-dots', highlight: 'fa-star', move: 'fa-arrows-alt', info: 'fa-info-circle' };
 
-  function reset() {
-    beats.forEach(function(b, i) {
-      b.classList.remove('done');
-      b.disabled = i !== 0;
-    });
-    beats[0].classList.add('current');
+// Per-object affordances (environment-inherent); fire regardless of story progress
+var ENTITIES = [
+  { id: 'doctor', label: 'Doctor', icon: 'fa-user-md', cells: {
+    gaze:  { type: 'dialogue', text: 'Doctor: "I\'m the attending today."' },
+    touch: { type: 'dialogue', text: 'Doctor: "Let me know if you need anything."' } } },
+  { id: 'surgeon', label: 'Surgeon', icon: 'fa-user-nurse', cells: {
+    gaze:    { type: 'dialogue', text: 'Surgeon: "We\'re prepping for surgery."' },
+    release: { type: 'move',     text: 'Drop the held object beside the surgeon' },
+    touch:   { type: 'dialogue', text: 'Surgeon: "Careful, I\'m scrubbed in."' } } },
+  { id: 'patient', label: 'Patient', icon: 'fa-procedures', cells: {
+    gaze:  { type: 'dialogue', text: 'Patient: "I\'m a little nervous."' },
+    touch: { type: 'dialogue', text: 'Patient: "Hello."' } } },
+  { id: 'trolley', label: 'Supply trolley', icon: 'fa-dolly-flatbed', cells: {
+    gaze:    { type: 'highlight', text: 'Supply trolley outline highlighted' },
+    grab:    { type: 'move',      text: 'Supply trolley attached to hand' },
+    release: { type: 'move',      text: 'Supply trolley dropped in place' } } },
+  { id: 'monitor', label: 'Patient monitor', icon: 'fa-heartbeat', cells: {
+    grab:    { type: 'move', text: 'Patient monitor attached to hand' },
+    release: { type: 'move', text: 'Patient monitor dropped in place' },
+    touch:   { type: 'info', text: 'Info panel: "Displays heart rate, SpO2, and blood pressure."' } } },
+  { id: 'table', label: 'Instrument table', icon: 'fa-toolbox', cells: {
+    gaze:  { type: 'highlight', text: 'Instrument table highlighted' },
+    touch: { type: 'info',      text: 'Info panel: "Sterile instruments for the procedure."' } } }
+];
+
+// Story line (task-conditioned); strictly sequential beats
+var BEATS = [
+  { entity: 'doctor', action: 'gaze', actions: [
+    ['Dialogue',  'Doctor: "The surgeon needs the supply trolley."'],
+    ['Animation', 'Doctor points toward the trolley'],
+    ['Highlight', 'Supply trolley'] ] },
+  { entity: 'trolley', action: 'grab', actions: [
+    ['Attach',    'Trolley follows the user\'s hand'],
+    ['Highlight', 'Surgeon'],
+    ['Animation', 'Surgeon turns and waves'],
+    ['Dialogue',  'Surgeon: "Over here, please."'] ] },
+  { entity: 'surgeon', action: 'release', needsHeld: 'trolley', actions: [
+    ['Place',     'Trolley set beside the operating table'],
+    ['Dialogue',  'Surgeon: "Thanks. Check the patient\'s vitals first."'],
+    ['Highlight', 'Patient monitor'] ] },
+  { entity: 'monitor', action: 'touch', actions: [
+    ['Info',      'Monitor shows HR 72 bpm, SpO2 98%'],
+    ['Dialogue',  'Surgeon: "Vitals are stable."'],
+    ['Highlight', 'Patient'],
+    ['Lighting',  'Overhead surgical light on'] ] },
+  { entity: 'patient', action: 'gaze', actions: [
+    ['Dialogue',  'Patient: "Will it hurt?"'],
+    ['Animation', 'Surgeon walks up to the patient'],
+    ['Dialogue',  'Surgeon: "You\'re in good hands."'],
+    ['State',     'Story complete'] ] }
+];
+
+function entityLabel(id) {
+  for (var i = 0; i < ENTITIES.length; i++) if (ENTITIES[i].id === id) return ENTITIES[i].label;
+  return id;
+}
+
+function initStoryDemo() {
+  var table = document.getElementById('imap');
+  var beatsEl = document.getElementById('story-beats');
+  var logEl = document.getElementById('event-log');
+  var holdingEl = document.getElementById('holding');
+  var progressEl = document.getElementById('story-progress');
+  if (!table || !beatsEl) return;
+
+  var state = { beat: 0, held: null, t: 0 };
+
+  // Build the interaction map
+  var head = '<thead><tr><th></th>' + PRIMITIVES.map(function(p) {
+    return '<th><i class="fas ' + p.icon + '"></i><span>' + p.label + '</span></th>';
+  }).join('') + '</tr></thead>';
+  var body = '<tbody>' + ENTITIES.map(function(e) {
+    return '<tr><th><i class="fas ' + e.icon + '"></i> ' + e.label + '</th>' + PRIMITIVES.map(function(p) {
+      var c = e.cells[p.id];
+      return c
+        ? '<td><button class="imap-cell" data-entity="' + e.id + '" data-action="' + p.id + '" title="' + p.label + ' ' + e.label + '"><i class="fas ' + RESPONSE_ICON[c.type] + '"></i></button></td>'
+        : '<td class="imap-empty">&ndash;</td>';
+    }).join('') + '</tr>';
+  }).join('') + '</tbody>';
+  table.innerHTML = head + body;
+
+  // Build the beats
+  beatsEl.innerHTML = BEATS.map(function(b, i) {
+    var p = PRIMITIVES.filter(function(x) { return x.id === b.action; })[0];
+    return '<li class="story-beat" data-beat="' + i + '">' +
+      '<div class="story-beat-head"><span class="story-beat-num">' + (i + 1) + '</span>' +
+      '<span class="story-trigger"><i class="fas ' + p.icon + '"></i> ' + p.label + ' &rarr; ' + entityLabel(b.entity) + '</span>' +
+      '<span class="story-status"></span></div>' +
+      '<ul class="story-actions">' + b.actions.map(function(a) {
+        return '<li><span class="act-type">' + a[0] + '</span><span class="act-text">' + a[1] + '</span></li>';
+      }).join('') + '</ul></li>';
+  }).join('');
+
+  function stamp() {
+    state.t += 1;
+    return '00:' + (state.t < 10 ? '0' : '') + state.t;
   }
 
-  beats.forEach(function(b, i) {
-    b.addEventListener('click', function() {
-      if (b.classList.contains('done')) return;
-      b.classList.remove('current');
-      b.classList.add('done');
-      b.disabled = true;
-      var html = '<div class="fsm-info-content"><h4>Beat ' + (i + 1) + ' fired</h4><p>' + BEAT_RESPONSES[i] + '</p>';
-      if (i + 1 < beats.length) {
-        beats[i + 1].disabled = false;
-        beats[i + 1].classList.add('current');
-      } else {
-        html += '<p><a href="#" id="beat-reset">Replay</a></p>';
-      }
-      log.classList.add('beat-fired');
-      log.innerHTML = html + '</div>';
-      var r = document.getElementById('beat-reset');
-      if (r) r.addEventListener('click', function(e) {
-        e.preventDefault();
-        reset();
-        log.classList.remove('beat-fired');
-        log.innerHTML = '<p class="fsm-hint"><i class="fas fa-info-circle"></i> Fire beat 1 to start the story</p>';
-      });
+  function log(html, cls) {
+    var row = document.createElement('div');
+    row.className = 'log-row ' + (cls || '');
+    row.innerHTML = html;
+    logEl.appendChild(row);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function render() {
+    beatsEl.querySelectorAll('.story-beat').forEach(function(li, i) {
+      li.classList.toggle('done', i < state.beat);
+      li.classList.toggle('active', i === state.beat);
+      li.classList.toggle('locked', i > state.beat);
+      li.querySelector('.story-status').textContent = i < state.beat ? 'fired' : i === state.beat ? 'active' : 'locked';
     });
+    table.querySelectorAll('.imap-cell').forEach(function(btn) {
+      var b = BEATS[state.beat];
+      btn.classList.toggle('is-target', !!b && btn.dataset.entity === b.entity && btn.dataset.action === b.action);
+    });
+    holdingEl.innerHTML = '<i class="fas fa-hand-paper"></i> Holding: <strong>' + (state.held ? entityLabel(state.held) : 'nothing') + '</strong>';
+    progressEl.textContent = state.beat + ' / ' + BEATS.length;
+  }
+
+  function playActions(i) {
+    var items = beatsEl.querySelectorAll('.story-beat')[i].querySelectorAll('.story-actions li');
+    items.forEach(function(li, k) {
+      li.classList.remove('played');
+      setTimeout(function() { li.classList.add('played'); }, 250 * (k + 1));
+    });
+  }
+
+  function perform(entity, action) {
+    var cell = ENTITIES.filter(function(e) { return e.id === entity; })[0].cells[action];
+    var t = stamp();
+    var text = cell.text;
+
+    // Held-object bookkeeping for grab / release
+    if (action === 'grab') state.held = entity;
+    var releasedHeld = null;
+    if (action === 'release') {
+      if (!state.held) text = 'Nothing in hand to release';
+      else { releasedHeld = state.held; if (entity !== state.held) text = entityLabel(state.held) + ' dropped beside the ' + entityLabel(entity).toLowerCase(); state.held = null; }
+    }
+
+    log('<span class="log-t">' + t + '</span><span class="log-tag tag-map">map</span>' +
+        '<span class="pipe-mono">{"action": "' + action + '", "entity": "' + entity + '"}</span> &rarr; ' + text);
+
+    // Second, parallel match against the active beat
+    var b = BEATS[state.beat];
+    if (b && b.entity === entity && b.action === action && (!b.needsHeld || releasedHeld === b.needsHeld)) {
+      log('<span class="log-t">' + t + '</span><span class="log-tag tag-story">story</span>Beat ' + (state.beat + 1) + ' fired, dispatching ' + b.actions.length + ' Unity actions', 'log-fired');
+      playActions(state.beat);
+      state.beat += 1;
+      if (state.beat === BEATS.length) log('<span class="log-t">' + t + '</span><span class="log-tag tag-done">done</span>Story line complete', 'log-fired');
+    } else if (b) {
+      var why = (b.entity === entity && b.action === action && b.needsHeld)
+        ? 'needs ' + entityLabel(b.needsHeld).toLowerCase() + ' in hand'
+        : 'active beat waits for ' + b.action + ' &rarr; ' + entityLabel(b.entity).toLowerCase();
+      log('<span class="log-t">' + t + '</span><span class="log-tag tag-miss">story</span>No match, ' + why, 'log-miss');
+    }
+    render();
+  }
+
+  table.addEventListener('click', function(e) {
+    var btn = e.target.closest('.imap-cell');
+    if (btn) perform(btn.dataset.entity, btn.dataset.action);
   });
-  reset();
+
+  document.getElementById('story-reset').addEventListener('click', function() {
+    state = { beat: 0, held: null, t: 0 };
+    logEl.innerHTML = '';
+    beatsEl.querySelectorAll('.story-actions li').forEach(function(li) { li.classList.remove('played'); });
+    log('<span class="log-hint">Waiting for input&hellip; try the pulsing cell, or any other one.</span>');
+    render();
+  });
+
+  log('<span class="log-hint">Waiting for input&hellip; try the pulsing cell, or any other one.</span>');
+  render();
 }
 
 // ─── Coherence vs spatial chart ──────────────────────────────
@@ -298,8 +391,7 @@ $(document).ready(function() {
   fillTable('phase1-body', PHASE1, PHASE1_DP);
   fillTable('phase2-body', PHASE2, PHASE2_DP);
   initPipelineAnimation();
-  initThreadCards();
-  initBeatChain();
+  initStoryDemo();
   initJudgeChart();
   initSortableTables();
   initBibTexCopy();

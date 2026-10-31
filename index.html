@@ -25,8 +25,7 @@
       <div style="margin-bottom:0.75rem;">
         <span style="display:inline-block;color:#e53e3e;font-size:0.85rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;">🔥 IEEE VISxGenAI 2026</span>
       </div>
-      <h1 class="title is-2 publication-title">🥽 From Description to Interactive VR Scene</h1>
-      <p class="subtitle is-4 hero-subtitle">An LLM Agent for Authoring Immersive Experiences</p>
+      <h1 class="title is-3 publication-title">🥽 From Description to Interactive VR Scene:<br>An LLM Agent for Authoring Immersive Experiences</h1>
       <div class="is-size-5 publication-authors" style="margin-top:0.75rem;line-height:2;">
         <span class="author-block">Rongqian Chen<sup>1</sup>,&nbsp;</span>
         <span class="author-block">Allison Andreyev<sup>1</sup>,&nbsp;</span>
@@ -200,27 +199,66 @@
 
     <div class="method-block">
       <h3 class="title is-4 method-subheading">Multi-Thread Reflection</h3>
-      <p class="method-desc">Five specialized threads each pair a lightweight VLM with a deterministic checker, so every LLM verdict is corroborated numerically. Each emits typed <span class="pipe-mono">add</span> / <span class="pipe-mono">delete</span> / <span class="pipe-mono">move</span> corrections. Click a thread to see what it checks.</p>
-      <div class="fsm-diagram" id="fsm-diagram">
-        <div class="fsm-state thread-bound" data-state="BOUND" tabindex="0">
-          <div class="fsm-state-inner"><i class="fas fa-vector-square"></i><span>#1 Bound</span></div>
+      <p class="method-desc">Five specialized threads run in parallel over the live <span class="pipe-mono">scene_state.json</span> and three orthogonal screenshots (<span class="pipe-mono">plane_xy</span>, <span class="pipe-mono">plane_xz</span>, <span class="pipe-mono">plane_yz</span>). Each pairs a deterministic checker with, where useful, a lightweight VLM, so every LLM verdict is corroborated numerically.</p>
+
+      <div class="thread-grid">
+        <div class="thread-card thread-bound">
+          <div class="thread-head"><i class="fas fa-vector-square"></i><span>#1 Bound</span><span class="thread-kind">VLM + checker</span></div>
+          <p>Keeps every object inside the room footprint.</p>
+          <dl>
+            <dt>Checker</dt><dd>Clamp to [x<sub>min</sub>, x<sub>max</sub>] &times; [z<sub>min</sub>, z<sub>max</sub>]</dd>
+            <dt>VLM</dt><dd>Re-verifies the clamped placement</dd>
+          </dl>
+          <code class="thread-fix">move  iv_stand  &rarr; clamp to wall</code>
         </div>
-        <div class="fsm-state thread-collision" data-state="COLLISION" tabindex="0">
-          <div class="fsm-state-inner"><i class="fas fa-car-crash"></i><span>#2 Collision</span></div>
+        <div class="thread-card thread-collision">
+          <div class="thread-head"><i class="fas fa-car-crash"></i><span>#2 Collision</span><span class="thread-kind">VLM + checker</span></div>
+          <p>Removes geometric overlap between placed objects.</p>
+          <dl>
+            <dt>Checker</dt><dd>Axis-Aligned Bounding Box (AABB) pair tests</dd>
+            <dt>VLM</dt><dd>Rechecks overlap on xy, xz, yz views</dd>
+          </dl>
+          <code class="thread-fix">move  trolley  &rarr; clear of op_table</code>
         </div>
-        <div class="fsm-state thread-physics" data-state="PHYSICS" tabindex="0">
-          <div class="fsm-state-inner"><i class="fas fa-weight-hanging"></i><span>#3 Physics</span></div>
+        <div class="thread-card thread-physics">
+          <div class="thread-head"><i class="fas fa-weight-hanging"></i><span>#3 Physics</span><span class="thread-kind">Deterministic</span></div>
+          <p>Flags floating or unsupported objects.</p>
+          <dl>
+            <dt>Checker</dt><dd>Vertical position vs. any plausible parent surface below</dd>
+            <dt>VLM</dt><dd>None</dd>
+          </dl>
+          <code class="thread-fix">move  monitor  &rarr; onto cart (y)</code>
         </div>
-        <div class="fsm-state thread-semantic" data-state="SEMANTIC" tabindex="0">
-          <div class="fsm-state-inner"><i class="fas fa-layer-group"></i><span>#4 Semantic</span></div>
+        <div class="thread-card thread-semantic">
+          <div class="thread-head"><i class="fas fa-layer-group"></i><span>#4 Semantic</span><span class="thread-kind">VLM + checker</span></div>
+          <p>Verifies support and containment relationships.</p>
+          <dl>
+            <dt>Checker</dt><dd>Height tests, e.g. small props on surfaces with y &ge; 0.7</dd>
+            <dt>VLM</dt><dd>Coherence judgment over the screenshots</dd>
+          </dl>
+          <code class="thread-fix">move  scalpel  &rarr; instrument_table</code>
         </div>
-        <div class="fsm-state thread-characters" data-state="CHARACTERS" tabindex="0">
-          <div class="fsm-state-inner"><i class="fas fa-user-md"></i><span>#5 Characters</span></div>
+        <div class="thread-card thread-characters">
+          <div class="thread-head"><i class="fas fa-user-md"></i><span>#5 Characters</span><span class="thread-kind">Deterministic</span></div>
+          <p>Ensures every human role in the description is present.</p>
+          <dl>
+            <dt>Checker</dt><dd>Parsed roles vs. placed characters</dd>
+            <dt>VLM</dt><dd>None</dd>
+          </dl>
+          <code class="thread-fix">add  surgeon  &rarr; beside op_table</code>
         </div>
       </div>
-      <div class="fsm-info-panel" id="fsm-info-panel">
-        <p class="fsm-hint"><i class="fas fa-info-circle"></i> Click a reflection thread above to see its check</p>
+
+      <div class="thread-flow">
+        <span class="flow-step"><i class="fas fa-code-branch"></i> Typed <span class="pipe-mono">add</span>/<span class="pipe-mono">delete</span>/<span class="pipe-mono">move</span> lines</span>
+        <i class="fas fa-chevron-right"></i>
+        <span class="flow-step"><i class="fas fa-filter"></i> Name sanitizing</span>
+        <i class="fas fa-chevron-right"></i>
+        <span class="flow-step"><i class="fas fa-object-group"></i> One merged suggestion</span>
+        <i class="fas fa-chevron-right"></i>
+        <span class="flow-step"><i class="fas fa-redo-alt"></i> Decision, up to 3 rounds per step</span>
       </div>
+      <p class="ablation-note" style="margin-top:0.6rem;"><i class="fas fa-info-circle"></i> Correction lines shown are illustrative examples of each thread's output format.</p>
     </div>
   </div>
 </section>
@@ -245,18 +283,38 @@
     </div>
 
     <div class="method-block" style="margin-top:2rem;">
-      <h3 class="title is-4 method-subheading">Try the story chain</h3>
-      <p class="method-desc"><em>&ldquo;Bring the supply trolley to the surgeon.&rdquo;</em> Only the active beat's trigger advances the story.</p>
-      <div class="beat-chain" id="beat-chain">
-        <button class="beat" data-beat="0"><i class="fas fa-eye"></i><span class="beat-action">Gaze</span><span class="beat-target">Doctor</span></button>
-        <i class="fas fa-long-arrow-alt-right beat-arrow"></i>
-        <button class="beat" data-beat="1" disabled><i class="fas fa-hand-rock"></i><span class="beat-action">Grab</span><span class="beat-target">Supply trolley</span></button>
-        <i class="fas fa-long-arrow-alt-right beat-arrow"></i>
-        <button class="beat" data-beat="2" disabled><i class="fas fa-hand-paper"></i><span class="beat-action">Release</span><span class="beat-target">At surgeon</span></button>
+      <h3 class="title is-4 method-subheading">Try the runtime</h3>
+      <p class="method-desc">Click any cell to perform that action on that entity. Every input is matched twice in parallel: against the <strong style="color:var(--c-blue)">interaction map</strong> for the per-object response (which always fires), and against the <strong style="color:var(--c-amber)">active beat</strong> to drive the story. The pulsing cell is the active beat's trigger.</p>
+
+      <div class="story-demo">
+        <div class="story-panel">
+          <div class="story-panel-title accent-blue"><i class="fas fa-th"></i> Interaction map</div>
+          <div class="table-wrap">
+            <table class="imap" id="imap"></table>
+          </div>
+          <div class="imap-legend">
+            <span><i class="fas fa-comment-dots"></i> dialogue</span>
+            <span><i class="fas fa-star"></i> highlight</span>
+            <span><i class="fas fa-arrows-alt"></i> move / place</span>
+            <span><i class="fas fa-info-circle"></i> info panel</span>
+          </div>
+          <div class="holding" id="holding"><i class="fas fa-hand-paper"></i> Holding: <strong>nothing</strong></div>
+          <div class="event-log-wrap">
+            <div class="event-log-head">
+              <span><i class="fas fa-file-code"></i> interaction_events.json</span>
+              <button class="event-reset" id="story-reset"><i class="fas fa-undo"></i> Reset</button>
+            </div>
+            <div class="event-log" id="event-log"></div>
+          </div>
+        </div>
+
+        <div class="story-panel">
+          <div class="story-panel-title accent-amber"><i class="fas fa-stream"></i> Story line <span class="story-progress" id="story-progress">0 / 5</span></div>
+          <ol class="story-beats" id="story-beats"></ol>
+        </div>
       </div>
-      <div class="fsm-info-panel" id="beat-log">
-        <p class="fsm-hint"><i class="fas fa-info-circle"></i> Fire beat 1 to start the story</p>
-      </div>
+
+      <p class="ablation-note" style="margin-top:0.6rem;"><i class="fas fa-info-circle"></i> Illustrative example extending the paper's &ldquo;Bring the supply trolley to the surgeon&rdquo; chain; dialogue lines are not from a generated trial.</p>
     </div>
 
     <div class="figure-block">
